@@ -1,6 +1,6 @@
 const int botones[] = {2, 3, 4, 5, 6, 7, 8, 9, 10}; // Pines conectados a botones
-const int numBotones = sizeof(botones) / sizeof(botones[0]);
-bool estadoAnterior[sizeof(botones) / sizeof(botones[0])];
+const int numBotones = 9;
+bool estadoAnterior[numBotones];
 
 void setup() {
   Serial.begin(9600);
