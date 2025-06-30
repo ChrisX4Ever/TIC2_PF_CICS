@@ -18,27 +18,28 @@ void loop() {
   for (int i = 0; i < numBotones; i++) {
     bool estadoActual = digitalRead(botones[i]);
 
-    // Flanco de bajada (botón presionado)
+    // Flanco de bajada
     if (estadoAnterior[i] == HIGH && estadoActual == LOW) {
       if (i == indiceBotonEspecial) {
-        // Inicia contador para detección de larga presión
         tiempoPresionado = millis();
         esperandoLargaPresion = true;
       } else {
-        Serial.println(i); // Botón normal
+        Serial.println(i);
       }
     }
 
-    // Si estamos esperando larga presión...
+    // Si estamos esperando una larga presión del botón especial...
     if (i == indiceBotonEspecial && esperandoLargaPresion) {
-      // Si el botón sigue presionado
       if (estadoActual == LOW) {
         if (millis() - tiempoPresionado >= 3000) {
-          Serial.println("A");  // Enviar señal especial
-          esperandoLargaPresion = false; // Ya se procesó
+          Serial.println("A");  // Presionado 3 segundos
+          esperandoLargaPresion = false;
         }
       } else {
-        // Se soltó antes de los 3 segundos, cancelar
+        // Se soltó antes de los 3 segundos
+        if (millis() - tiempoPresionado < 3000) {
+          Serial.println(i);  // Enviar número del botón
+        }
         esperandoLargaPresion = false;
       }
     }
@@ -46,5 +47,5 @@ void loop() {
     estadoAnterior[i] = estadoActual;
   }
 
-  delay(10); // Anti-rebote
+  delay(10);
 }
