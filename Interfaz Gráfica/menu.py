@@ -113,7 +113,7 @@ class MenuApp(QtWidgets.QWidget):
     def launch_subinterface(self, Module):
         self.subwindow_open = True
         window = QtWidgets.QMainWindow()
-        ui = Module.Ui_Form()
+        ui = Module.Ui_MainWindow()
         ui.setupUi(window)
         window.show()
         window.destroyed.connect(self.on_subwindow_closed)
