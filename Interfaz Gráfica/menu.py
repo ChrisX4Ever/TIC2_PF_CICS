@@ -2,7 +2,8 @@ import sys
 import threading
 import serial
 from PyQt5 import QtCore, QtGui, QtWidgets
-import S_D, M_A, E_L  # Asegúrate de tener estos archivos con clase Ui_Form
+import S_D, M_A, E_L
+
 
 class MenuApp(QtWidgets.QWidget):
     serial_signal = QtCore.pyqtSignal(int)
@@ -14,7 +15,7 @@ class MenuApp(QtWidgets.QWidget):
         self.buttons = [self.J1, self.J2, self.J3]
         self.current_index = 0
         self.highlight_selection()
-        self.subwindow_open = False  # 👈 Pausar entrada serial si hay ventana abierta
+        self.subwindow_open = False
 
         self.J1.clicked.connect(self.launch_S_D)
         self.J2.clicked.connect(self.launch_M_A)
@@ -23,6 +24,7 @@ class MenuApp(QtWidgets.QWidget):
         self.serial_signal.connect(self.handle_input)
 
         self.running = True
+        self.arduino = None
         self.serial_thread = threading.Thread(target=self.read_serial, daemon=True)
         self.serial_thread.start()
 
@@ -87,44 +89,47 @@ class MenuApp(QtWidgets.QWidget):
 
     def read_serial(self):
         try:
-            arduino = serial.Serial('COM5', 9600, timeout=1)
+            self.arduino = serial.Serial('COM5', 9600, timeout=1)
             print("[INFO] Puerto COM5 abierto correctamente.")
-            while self.running:
-                if arduino.in_waiting:
-                    line = arduino.readline().decode(errors='ignore').strip()
-                    if line.isdigit():
-                        code = int(line)
-                        print(f"[SERIAL] Recibido: '{code}'")
-                        self.serial_signal.emit(code)
         except Exception as e:
-            print(f"[ERROR SERIAL]: {e}")
+            print(f"[ERROR] No se pudo abrir el puerto COM5: {e}")
+            return
+
+        while self.running:
+            try:
+                if self.arduino.in_waiting:
+                    line = self.arduino.readline().decode(errors='ignore').strip()
+                    if line:
+                        print(f"[SERIAL] Recibido: '{line}'")
+                        if line.isdigit():
+                            self.serial_signal.emit(int(line))
+                        elif line == "A":
+                            print("[INFO] Comando especial 'A' recibido.")
+                            # Puedes usar esto para activar algo adicional si quieres
+            except Exception as e:
+                print(f"[ERROR SERIAL]: {e}")
+                continue
+
+    def launch_subinterface(self, Module):
+        self.subwindow_open = True
+        window = QtWidgets.QMainWindow()
+        ui = Module.Ui_Form()
+        ui.setupUi(window)
+        window.show()
+        window.destroyed.connect(self.on_subwindow_closed)
+        return window  # Retornar referencia para mantenerla viva
 
     def launch_S_D(self):
         print("[INFO] Lanzando Simon Dice...")
-        self.window_sd = QtWidgets.QMainWindow()
-        self.ui_sd = S_D.Ui_Form()
-        self.ui_sd.setupUi(self.window_sd)
-        self.subwindow_open = True
-        self.window_sd.show()
-        self.window_sd.destroyed.connect(self.on_subwindow_closed)
+        self.window_sd = self.launch_subinterface(S_D)
 
     def launch_M_A(self):
         print("[INFO] Lanzando Modo Aventura...")
-        self.window_ma = QtWidgets.QMainWindow()
-        self.ui_ma = M_A.Ui_Form()
-        self.ui_ma.setupUi(self.window_ma)
-        self.subwindow_open = True
-        self.window_ma.show()
-        self.window_ma.destroyed.connect(self.on_subwindow_closed)
+        self.window_ma = self.launch_subinterface(M_A)
 
     def launch_E_L(self):
         print("[INFO] Lanzando Estilo Libre...")
-        self.window_el = QtWidgets.QMainWindow()
-        self.ui_el = E_L.Ui_Form()
-        self.ui_el.setupUi(self.window_el)
-        self.subwindow_open = True
-        self.window_el.show()
-        self.window_el.destroyed.connect(self.on_subwindow_closed)
+        self.window_el = self.launch_subinterface(E_L)
 
     def on_subwindow_closed(self):
         print("[INFO] Ventana secundaria cerrada. Se reanuda el control.")
@@ -132,7 +137,10 @@ class MenuApp(QtWidgets.QWidget):
 
     def closeEvent(self, event):
         self.running = False
+        if self.arduino and self.arduino.is_open:
+            self.arduino.close()
         event.accept()
+
 
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)

@@ -4,6 +4,7 @@ bool estadoAnterior[numBotones];
 
 unsigned long tiempoPresionado = 0;
 bool esperandoLargaPresion = false;
+bool yaEnviadoA = false;
 const int indiceBotonEspecial = 7; // botón 8 (pin 9)
 
 void setup() {
@@ -23,24 +24,25 @@ void loop() {
       if (i == indiceBotonEspecial) {
         tiempoPresionado = millis();
         esperandoLargaPresion = true;
+        yaEnviadoA = false;
       } else {
         Serial.println(i);
       }
     }
 
-    // Si estamos esperando una larga presión del botón especial...
     if (i == indiceBotonEspecial && esperandoLargaPresion) {
       if (estadoActual == LOW) {
-        if (millis() - tiempoPresionado >= 3000) {
-          Serial.println("A");  // Presionado 3 segundos
-          esperandoLargaPresion = false;
+        if (!yaEnviadoA && millis() - tiempoPresionado >= 3000) {
+          Serial.println("A");  // Presionado 3+ segundos
+          yaEnviadoA = true;
         }
       } else {
-        // Se soltó antes de los 3 segundos
-        if (millis() - tiempoPresionado < 3000) {
-          Serial.println(i);  // Enviar número del botón
+        // Se soltó antes de 3 segundos
+        if (!yaEnviadoA && millis() - tiempoPresionado < 3000) {
+          Serial.println(i);
         }
         esperandoLargaPresion = false;
+        yaEnviadoA = false;
       }
     }
 
