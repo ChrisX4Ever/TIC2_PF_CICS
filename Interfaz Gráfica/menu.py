@@ -4,9 +4,8 @@ import serial
 from PyQt5 import QtCore, QtGui, QtWidgets
 import S_D, M_A, E_L
 
-
 class MenuApp(QtWidgets.QWidget):
-    serial_signal = QtCore.pyqtSignal(int)
+    serial_signal = QtCore.pyqtSignal(object)  # Aceptar tanto int como str
 
     def __init__(self):
         super().__init__()
@@ -16,6 +15,8 @@ class MenuApp(QtWidgets.QWidget):
         self.current_index = 0
         self.highlight_selection()
         self.subwindow_open = False
+        self.active_subwindow = None  # Guardar referencia a la ventana activa
+        self.active_ui = None         # Guardar referencia al objeto UI
 
         self.J1.clicked.connect(self.launch_S_D)
         self.J2.clicked.connect(self.launch_M_A)
@@ -74,7 +75,11 @@ class MenuApp(QtWidgets.QWidget):
 
     def handle_input(self, code):
         if self.subwindow_open:
-            print("[INFO] Entrada ignorada: ventana secundaria abierta.")
+            print("[INFO] Entrada secundaria enviada a subinterfaz")
+            if hasattr(self.active_ui, "handle_serial"):
+                self.active_ui.handle_serial(code)
+            else:
+                print("[INFO] Subinterfaz no tiene 'handle_serial'")
             return
 
         print(f"[INFO] Código recibido: {code}")
@@ -103,9 +108,8 @@ class MenuApp(QtWidgets.QWidget):
                         print(f"[SERIAL] Recibido: '{line}'")
                         if line.isdigit():
                             self.serial_signal.emit(int(line))
-                        elif line == "A":
-                            print("[INFO] Comando especial 'A' recibido.")
-                            # Puedes usar esto para activar algo adicional si quieres
+                        else:
+                            self.serial_signal.emit(line)
             except Exception as e:
                 print(f"[ERROR SERIAL]: {e}")
                 continue
@@ -115,9 +119,12 @@ class MenuApp(QtWidgets.QWidget):
         window = QtWidgets.QMainWindow()
         ui = Module.Ui_MainWindow()
         ui.setupUi(window)
+        window.ui = ui  # Guardar referencia del objeto ui
+        self.active_subwindow = window
+        self.active_ui = ui
         window.show()
         window.destroyed.connect(self.on_subwindow_closed)
-        return window  # Retornar referencia para mantenerla viva
+        return window
 
     def launch_S_D(self):
         print("[INFO] Lanzando Simon Dice...")
@@ -134,13 +141,14 @@ class MenuApp(QtWidgets.QWidget):
     def on_subwindow_closed(self):
         print("[INFO] Ventana secundaria cerrada. Se reanuda el control.")
         self.subwindow_open = False
+        self.active_subwindow = None
+        self.active_ui = None
 
     def closeEvent(self, event):
         self.running = False
         if self.arduino and self.arduino.is_open:
             self.arduino.close()
         event.accept()
-
 
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
