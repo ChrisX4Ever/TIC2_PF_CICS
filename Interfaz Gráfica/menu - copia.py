@@ -122,16 +122,9 @@ class MenuApp(QtWidgets.QWidget):
         window.ui = ui  # Guardar referencia del objeto ui
         self.active_subwindow = window
         self.active_ui = ui
-
-        # 🔁 Conectar señal de cierre si la subinterfaz la tiene
-        if hasattr(ui, "close_requested"):
-            ui.close_requested.connect(window.close)
-            ui.close_requested.connect(self.on_subwindow_closed)
-
         window.show()
         window.destroyed.connect(self.on_subwindow_closed)
         return window
-
 
     def launch_S_D(self):
         print("[INFO] Lanzando Simon Dice...")

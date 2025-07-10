@@ -4,12 +4,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtMultimedia import QSound
 import os
 
-class Ui_MainWindow(QtCore.QObject):
-    close_requested = QtCore.pyqtSignal()
-
-    def __init__(self):
-        super().__init__()
-
+class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
         MainWindow.resize(916, 752)
@@ -33,10 +28,6 @@ class Ui_MainWindow(QtCore.QObject):
         self.label_2 = QtWidgets.QLabel(self.splitter)
         self.label_2.setAlignment(QtCore.Qt.AlignCenter)
         self.label_2.setStyleSheet("font-size: 28pt; font-weight: bold; color: yellow;")
-
-        self.label_octave = QtWidgets.QLabel(self.splitter)
-        self.label_octave.setAlignment(QtCore.Qt.AlignCenter)
-        self.label_octave.setStyleSheet("font-size: 16pt; font-weight: bold; color: white;")
 
         self.horizontalFrame = QtWidgets.QFrame(self.splitter)
         self.horizontalLayout_4 = QtWidgets.QHBoxLayout(self.horizontalFrame)
@@ -74,8 +65,6 @@ class Ui_MainWindow(QtCore.QObject):
             (self.b7, "B", "Si"),
         ]
 
-        self.update_octave_label()
-
     def handle_serial(self, code):
         if code in range(7):
             button, note, text = self.button_sounds[code]
@@ -88,18 +77,22 @@ class Ui_MainWindow(QtCore.QObject):
             if self.current_octave < self.min_octave:
                 self.current_octave = self.max_octave
             print(f"[E_L] Octava actual: {self.current_octave}")
-            self.update_octave_label()
 
         elif code == 8:  # Botón 9: avanzar octava
             self.current_octave += 1
             if self.current_octave > self.max_octave:
                 self.current_octave = self.min_octave
             print(f"[E_L] Octava actual: {self.current_octave}")
-            self.update_octave_label()
 
         elif isinstance(code, str) and code.upper() == "A":
             print("[E_L] Cierre solicitado por botón prolongado.")
-            self.close_requested.emit()
+            parent_window = self.centralwidget.parent()
+            if hasattr(parent_window, "destroyed") and parent_window:
+                parent_window.close()
+                if hasattr(parent_window, "parent") and parent_window.parent():
+                    main_parent = parent_window.parent()
+                    if hasattr(main_parent, "on_subwindow_closed"):
+                        main_parent.on_subwindow_closed()
 
     def highlight_button(self, button):
         original = button.styleSheet()
@@ -113,16 +106,11 @@ class Ui_MainWindow(QtCore.QObject):
         else:
             print(f"[E_L] Archivo no encontrado: {path}")
 
-    def update_octave_label(self):
-        self.label_octave.setText(f"Octava actual: {self.current_octave}")
-
 if __name__ == "__main__":
     import sys
     app = QtWidgets.QApplication(sys.argv)
     MainWindow = QtWidgets.QMainWindow()
     ui = Ui_MainWindow()
     ui.setupUi(MainWindow)
-    MainWindow.ui = ui
-    ui.close_requested.connect(MainWindow.close)
     MainWindow.show()
     sys.exit(app.exec_())
