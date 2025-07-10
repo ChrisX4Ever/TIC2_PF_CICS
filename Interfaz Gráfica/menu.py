@@ -2,10 +2,11 @@ import sys
 import threading
 import serial
 from PyQt5 import QtCore, QtGui, QtWidgets
-import S_D, M_A, E_L
+import S_D, M_A
+import E_L  # Asegúrate que contiene 'MainWindowLogic'
 
 class MenuApp(QtWidgets.QWidget):
-    serial_signal = QtCore.pyqtSignal(object)  # Aceptar tanto int como str
+    serial_signal = QtCore.pyqtSignal(object)  # Para aceptar tanto int como str
 
     def __init__(self):
         super().__init__()
@@ -15,8 +16,8 @@ class MenuApp(QtWidgets.QWidget):
         self.current_index = 0
         self.highlight_selection()
         self.subwindow_open = False
-        self.active_subwindow = None  # Guardar referencia a la ventana activa
-        self.active_ui = None         # Guardar referencia al objeto UI
+        self.active_subwindow = None
+        self.active_ui = None
 
         self.J1.clicked.connect(self.launch_S_D)
         self.J2.clicked.connect(self.launch_M_A)
@@ -74,15 +75,16 @@ class MenuApp(QtWidgets.QWidget):
                 btn.setStyleSheet("background-color: rgb(255, 255, 0);")
 
     def handle_input(self, code):
-        if self.subwindow_open:
-            print("[INFO] Entrada secundaria enviada a subinterfaz")
+        if self.subwindow_open and self.active_ui:
             if hasattr(self.active_ui, "handle_serial"):
                 self.active_ui.handle_serial(code)
+                print(f"[INFO] Entrada enviada a subinterfaz: {code}")
+                return
             else:
-                print("[INFO] Subinterfaz no tiene 'handle_serial'")
-            return
+                print("[INFO] Subinterfaz no tiene método 'handle_serial'")
 
-        print(f"[INFO] Código recibido: {code}")
+        # Si no hay subventana abierta, manejar en el menú principal
+        print(f"[INFO] Código recibido en menú: {code}")
         if code == 8:
             self.current_index = (self.current_index + 1) % len(self.buttons)
             self.highlight_selection()
@@ -114,24 +116,28 @@ class MenuApp(QtWidgets.QWidget):
                 print(f"[ERROR SERIAL]: {e}")
                 continue
 
-    def launch_subinterface(self, Module):
+    def launch_subinterface(self, Module, is_el=False):
         self.subwindow_open = True
-        window = QtWidgets.QMainWindow()
-        ui = Module.Ui_MainWindow()
-        ui.setupUi(window)
-        window.ui = ui  # Guardar referencia del objeto ui
-        self.active_subwindow = window
-        self.active_ui = ui
 
-        # 🔁 Conectar señal de cierre si la subinterfaz la tiene
-        if hasattr(ui, "close_requested"):
-            ui.close_requested.connect(window.close)
-            ui.close_requested.connect(self.on_subwindow_closed)
+        if is_el:
+            # Crear e inicializar instancia de MainWindowLogic
+            window = Module.MainWindowLogic(parent_menu=self)
+            self.active_subwindow = window
+            self.active_ui = window
+            window.show()
+            window.destroyed.connect(self.on_subwindow_closed)
+        else:
+            # Para las otras interfaces
+            window = QtWidgets.QMainWindow()
+            ui = Module.Ui_MainWindow()
+            ui.setupUi(window)
+            window.ui = ui
+            self.active_subwindow = window
+            self.active_ui = ui
+            window.show()
+            window.destroyed.connect(self.on_subwindow_closed)
 
-        window.show()
-        window.destroyed.connect(self.on_subwindow_closed)
         return window
-
 
     def launch_S_D(self):
         print("[INFO] Lanzando Simon Dice...")
@@ -143,10 +149,15 @@ class MenuApp(QtWidgets.QWidget):
 
     def launch_E_L(self):
         print("[INFO] Lanzando Estilo Libre...")
-        self.window_el = self.launch_subinterface(E_L)
+        self.window_el = E_L.MainWindowLogic(parent_menu=self)
+        self.window_el.show()
+        self.active_subwindow = self.window_el
+        self.active_ui = self.window_el
+        self.subwindow_open = True
+        self.window_el.destroyed.connect(self.on_subwindow_closed)
 
     def on_subwindow_closed(self):
-        print("[INFO] Ventana secundaria cerrada. Se reanuda el control.")
+        print("[INFO] Ventana secundaria cerrada. Se reanuda el control en menú.")
         self.subwindow_open = False
         self.active_subwindow = None
         self.active_ui = None
