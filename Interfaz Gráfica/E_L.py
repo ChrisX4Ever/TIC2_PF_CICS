@@ -86,7 +86,13 @@ class Ui_MainWindow(object):
 
         elif isinstance(code, str) and code.upper() == "A":
             print("[E_L] Cierre solicitado por botón prolongado.")
-            self.centralwidget.parent().close()
+            parent_window = self.centralwidget.parent()
+            if hasattr(parent_window, "destroyed") and parent_window:
+                parent_window.close()
+                if hasattr(parent_window, "parent") and parent_window.parent():
+                    main_parent = parent_window.parent()
+                    if hasattr(main_parent, "on_subwindow_closed"):
+                        main_parent.on_subwindow_closed()
 
     def highlight_button(self, button):
         original = button.styleSheet()
