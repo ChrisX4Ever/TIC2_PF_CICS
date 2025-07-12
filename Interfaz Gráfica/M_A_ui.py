@@ -142,12 +142,12 @@ class Ui_MainWindow(object):
         self.label_2 = QtWidgets.QLabel(self.centralwidget)
         self.label_2.setGeometry(QtCore.QRect(510, 170, 241, 301))
         self.label_2.setObjectName("label_2")
-        self.label_3 = QtWidgets.QLabel(self.centralwidget)
-        self.label_3.setGeometry(QtCore.QRect(30, 170, 451, 291))
-        self.label_3.setObjectName("label_3")
         self.textBrowser = QtWidgets.QTextBrowser(self.centralwidget)
         self.textBrowser.setGeometry(QtCore.QRect(220, 10, 471, 71))
         self.textBrowser.setObjectName("textBrowser")
+        self.label_3 = QtWidgets.QLabel(self.centralwidget)
+        self.label_3.setGeometry(QtCore.QRect(20, 170, 471, 311))
+        self.label_3.setObjectName("label_3")
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(MainWindow)
         self.menubar.setGeometry(QtCore.QRect(0, 0, 916, 21))
@@ -168,12 +168,12 @@ class Ui_MainWindow(object):
         self.combobox_games.setItemText(1, _translate("MainWindow", "ZELDA"))
         self.combobox_games.setItemText(2, _translate("MainWindow", "POKEMON"))
         self.label_2.setText(_translate("MainWindow", "TextLabel"))
-        self.label_3.setText(_translate("MainWindow", "TextLabel"))
         self.textBrowser.setHtml(_translate("MainWindow", "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
 "<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
 "p, li { white-space: pre-wrap; }\n"
 "</style></head><body style=\" font-family:\'MS Shell Dlg 2\'; font-size:8.25pt; font-weight:400; font-style:normal;\">\n"
 "<p align=\"center\" style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><span style=\" font-size:24pt; font-weight:600; color:#ffff00;\">MODO AVENTURA</span></p></body></html>"))
+        self.label_3.setText(_translate("MainWindow", "TextLabel"))
 
 
 if __name__ == "__main__":

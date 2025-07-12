@@ -2,12 +2,12 @@
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtMultimedia import QSound
-from PyQt5.QtMultimediaWidgets import QVideoWidget
-from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent
-from PyQt5.QtCore import QUrl
 import os
+import threading
+import vlc
+import sys
 
-from M_A_ui import Ui_MainWindow  # Importa desde el archivo generado por pyuic5
+from M_A_ui import Ui_MainWindow  # Interfaz generada con pyuic5
 
 SOUND_PATH = "D:/Program Files/TIC2_PF_CICS/sounds"
 IMAGE_PATH = "D:/Program Files/TIC2_PF_CICS/Interfaz Gráfica/imagenes"
@@ -17,24 +17,24 @@ MODES = ["SUPER MARIO", "ZELDA", "POKEMON"]
 
 SEQUENCES = {
     "SUPER MARIO": {
-        (3, 3, 3, 1, 3, 3): "marioStarman.mkv",
-        (0, 1, 2, 0, 1, 2, 5, 4): "marioStageClear.mkv",
-        (2, 0, 2, 2, 0, 2): "marioUnderground.mkv",
-        (2, 4, 6): "marioPowerUp.mkv",
-        (5, 5, 5): "marioWarpPipe.mkv"
+        (3, 3, 3, 1, 3, 3): "marioStarman.mp4",
+        (0, 1, 2, 0, 1, 2, 5, 4): "marioStageClear.mp4",
+        (2, 0, 2, 2, 0, 2): "marioUnderground.mp4",
+        (2, 4, 6): "marioPowerUp.mp4",
+        (5, 5, 5): "marioWarpPipe.mp4"
     },
     "ZELDA": {
-        (4, 5, 4, 2, 3, 4, 5, 4): "zeldaLullaby.mkv",
-        (3, 5, 6, 3, 5, 6): "zeldaSariaSong.mkv",
-        (0, 1, 6, 0, 1, 6): "zeldaSongOfStorms.mkv",
-        (5, 1, 3, 5, 1): "zeldaSongOfTime.mkv"
+        (4, 5, 4, 2, 3, 4, 5, 4): "zeldaLullaby.mp4",
+        (3, 5, 6, 3, 5, 6): "zeldaSariaSong.mp4",
+        (0, 1, 6, 0, 1, 6): "zeldaSongOfStorms.mp4",
+        (5, 1, 3, 5, 1): "zeldaSongOfTime.mp4"
     },
     "POKEMON": {
-        (2, 2, 2, 6): "pokemonLevelUp.mkv",
-        (5, 4, 2, 1, 5, 4, 2, 1): "pokemonTrainerEncounter.mkv",
-        (5, 3, 1): "pokemonCapture.mkv",
-        (6, 6, 6): "pokemonCenterHealing.mkv",
-        (4, 4, 4, 5, 4, 4): "pokemonGymBattle.mkv"
+        (2, 2, 2, 6): "pokemonLevelUp.mp4",
+        (5, 4, 2, 1, 5, 4, 2, 1): "pokemonTrainerEncounter.mp4",
+        (5, 3, 1): "pokemonCapture.mp4",
+        (6, 6, 6): "pokemonCenterHealing.mp4",
+        (4, 4, 4, 5, 4, 4): "pokemonGymBattle.mp4"
     }
 }
 
@@ -47,14 +47,16 @@ class MainWindowLogic(QtWidgets.QMainWindow):
         self.menu_ref = parent_menu
         self.mode_index = 0
         self.recent_signals = []
-        self.video_player = QMediaPlayer(None, QMediaPlayer.VideoSurface)
-        self.video_widget = QVideoWidget()
-        self.ui.label_3.layout().addWidget(self.video_widget) if self.ui.label_3.layout() else self.video_widget.setParent(self.ui.label_3)
-        self.video_widget.setGeometry(0, 0, self.ui.label_3.width(), self.ui.label_3.height())
 
-        self.video_player.setVideoOutput(self.video_widget)
-        self.video_player.setVolume(100)
-        self.video_widget.hide()
+        # VLC Widget encima de label_3
+        self.vlc_widget = QtWidgets.QFrame(self.ui.label_3)
+        self.vlc_widget.setGeometry(0, 0, self.ui.label_3.width(), self.ui.label_3.height())
+        self.vlc_widget.setStyleSheet("background-color: black;")
+        self.vlc_widget.hide()
+
+        # Configurar VLC
+        self.vlc_instance = vlc.Instance()
+        self.vlc_player = self.vlc_instance.media_player_new()
 
         self.buttons = [self.ui.b1, self.ui.b2, self.ui.b3, self.ui.b4, self.ui.b5, self.ui.b6, self.ui.b7]
         self.special_buttons = [self.ui.b8, self.ui.b9]
@@ -65,7 +67,7 @@ class MainWindowLogic(QtWidgets.QMainWindow):
             self.menu_ref.subwindow_open = True
             self.menu_ref.active_subwindow = self
             self.menu_ref.active_ui = self
-            
+
         self.set_mode(0)
 
     def handle_serial(self, code):
@@ -111,20 +113,18 @@ class MainWindowLogic(QtWidgets.QMainWindow):
 
         mode = MODES[index]
         if mode == "SUPER MARIO":
-            pixmap = QtGui.QPixmap(os.path.join(IMAGE_PATH, "MiniMario.png"))
-            self.ui.label_3.setPixmap(pixmap.scaled(self.ui.label_3.size(), QtCore.Qt.KeepAspectRatio, QtCore.Qt.SmoothTransformation))
-            pixmap2 = QtGui.QPixmap(os.path.join(IMAGE_PATH, "SecuenciasMario.png"))
-            self.ui.label_2.setPixmap(pixmap2.scaled(self.ui.label_2.size(), QtCore.Qt.KeepAspectRatio, QtCore.Qt.SmoothTransformation))
+            self.set_pixmap(self.ui.label_3, "MiniMario.png")
+            self.set_pixmap(self.ui.label_2, "SecuenciasMario.png")
         elif mode == "ZELDA":
-            pixmap = QtGui.QPixmap(os.path.join(IMAGE_PATH, "ZeldaLink.png"))
-            self.ui.label_3.setPixmap(pixmap.scaled(self.ui.label_3.size(), QtCore.Qt.KeepAspectRatio, QtCore.Qt.SmoothTransformation))
-            pixmap2 = QtGui.QPixmap(os.path.join(IMAGE_PATH, "SecuenciasZelda.png"))
-            self.ui.label_2.setPixmap(pixmap2.scaled(self.ui.label_2.size(), QtCore.Qt.KeepAspectRatio, QtCore.Qt.SmoothTransformation))
+            self.set_pixmap(self.ui.label_3, "ZeldaLink.png")
+            self.set_pixmap(self.ui.label_2, "SecuenciasZelda.png")
         elif mode == "POKEMON":
-            pixmap = QtGui.QPixmap(os.path.join(IMAGE_PATH, "Pikachu.png"))
-            self.ui.label_3.setPixmap(pixmap.scaled(self.ui.label_3.size(), QtCore.Qt.KeepAspectRatio, QtCore.Qt.SmoothTransformation))
-            pixmap2 = QtGui.QPixmap(os.path.join(IMAGE_PATH, "SecuenciasPokemon.png"))
-            self.ui.label_2.setPixmap(pixmap2.scaled(self.ui.label_2.size(), QtCore.Qt.KeepAspectRatio, QtCore.Qt.SmoothTransformation))
+            self.set_pixmap(self.ui.label_3, "Pikachu.png")
+            self.set_pixmap(self.ui.label_2, "SecuenciasPokemon.png")
+
+    def set_pixmap(self, label, filename):
+        pixmap = QtGui.QPixmap(os.path.join(IMAGE_PATH, filename))
+        label.setPixmap(pixmap.scaled(label.size(), QtCore.Qt.KeepAspectRatio, QtCore.Qt.SmoothTransformation))
 
     def set_mode_from_combobox(self, index):
         self.set_mode(index)
@@ -142,20 +142,40 @@ class MainWindowLogic(QtWidgets.QMainWindow):
         if not os.path.exists(path):
             print(f"[ERROR] Video no encontrado: {path}")
             return
-        self.video_widget.show()
-        self.video_player.setMedia(QMediaContent(QUrl.fromLocalFile(path)))
-        self.video_player.play()
-        self.video_player.mediaStatusChanged.connect(self.restore_image_after_video)
 
+        print(f"[VIDEO] Reproduciendo: {path}")
 
-    def restore_image_after_video(self, status):
-        if status == QMediaPlayer.EndOfMedia:
-            self.video_widget.hide()
-            self.set_mode(self.mode_index)
-            self.video_player.stop()
-            self.video_player.setMedia(QMediaContent())
+        # Mostrar el widget antes de usar winId
+        self.vlc_widget.show()
+        self.vlc_widget.raise_()  # Asegura que esté encima de label_3
+        QtWidgets.QApplication.processEvents()  # Fuerza actualización
+
+        # Establecer el widget como salida de video
+        if sys.platform.startswith("win"):
+            self.vlc_player.set_hwnd(int(self.vlc_widget.winId()))
+        else:
+            self.vlc_player.set_xwindow(int(self.vlc_widget.winId()))  # Para Linux
+
+        media = self.vlc_instance.media_new(path)
+        self.vlc_player.set_media(media)
+        
+        # Usar timer en vez de thread para monitorear el estado
+        self.vlc_player.play()
+        QtCore.QTimer.singleShot(500, self.monitor_video_end)
+
+    def monitor_video_end(self):
+        if not self.vlc_player.is_playing():
+            self.on_video_finished()
+        else:
+            QtCore.QTimer.singleShot(500, self.monitor_video_end)
+
+    def on_video_finished(self):
+        self.vlc_widget.hide()
+        self.set_mode(self.mode_index)
 
     def closeEvent(self, event):
         if self.menu_ref:
             self.menu_ref.on_subwindow_closed()
+        if self.vlc_player:
+            self.vlc_player.stop()
         event.accept()
