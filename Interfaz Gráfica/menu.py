@@ -75,13 +75,18 @@ class MenuApp(QtWidgets.QWidget):
                 btn.setStyleSheet("background-color: rgb(255, 255, 0);")
 
     def handle_input(self, code):
-        if self.subwindow_open and self.active_ui:
-            if hasattr(self.active_ui, "handle_serial"):
-                self.active_ui.handle_serial(code)
+        if self.subwindow_open and self.active_subwindow and self.active_subwindow.isVisible():
+            if hasattr(self.active_subwindow, "handle_serial"):
+                self.active_subwindow.handle_serial(code)
                 print(f"[INFO] Entrada enviada a subinterfaz: {code}")
                 return
+            elif hasattr(self.active_ui, "handle_serial"):
+                self.active_ui.handle_serial(code)
+                print(f"[INFO] Entrada enviada a subinterfaz (desde UI): {code}")
+                return
             else:
-                print("[INFO] Subinterfaz no tiene método 'handle_serial'")
+                print("[INFO] Subinterfaz abierta, pero sin 'handle_serial'")
+
 
         # Si no hay subventana abierta, manejar en el menú principal
         print(f"[INFO] Código recibido en menú: {code}")
@@ -117,27 +122,30 @@ class MenuApp(QtWidgets.QWidget):
                 continue
 
     def launch_subinterface(self, Module, is_el=False):
-        self.subwindow_open = True
-
-        if is_el:
-            # Crear e inicializar instancia de MainWindowLogic
+        # Para las interfaces con lógica personalizada (MainWindowLogic)
+        if is_el or Module.__name__ in ["E_L", "M_A"]:
             window = Module.MainWindowLogic(parent_menu=self)
-            self.active_subwindow = window
-            self.active_ui = window
-            window.show()
-            window.destroyed.connect(self.on_subwindow_closed)
         else:
-            # Para las otras interfaces
+            # Interfaces sin lógica propia (solo generadas por Qt Designer)
             window = QtWidgets.QMainWindow()
             ui = Module.Ui_MainWindow()
             ui.setupUi(window)
             window.ui = ui
+
+        # Mostrar ventana y establecer referencias
+        window.show()
+
+        # Establecer control de subventana solo si sigue visible
+        if window.isVisible():
+            self.subwindow_open = True
             self.active_subwindow = window
-            self.active_ui = ui
-            window.show()
-            window.destroyed.connect(self.on_subwindow_closed)
+            self.active_ui = window if hasattr(window, "handle_serial") else getattr(window, "ui", None)
+
+        # Conectar la señal 'destroyed' para limpiar al cerrar
+        window.destroyed.connect(self.on_subwindow_closed)
 
         return window
+
 
     def launch_S_D(self):
         print("[INFO] Lanzando Simon Dice...")
