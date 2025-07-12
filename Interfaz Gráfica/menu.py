@@ -122,29 +122,25 @@ class MenuApp(QtWidgets.QWidget):
                 continue
 
     def launch_subinterface(self, Module, is_el=False):
-        # Para las interfaces con lógica personalizada (MainWindowLogic)
         if is_el or Module.__name__ in ["E_L", "M_A"]:
             window = Module.MainWindowLogic(parent_menu=self)
         else:
-            # Interfaces sin lógica propia (solo generadas por Qt Designer)
             window = QtWidgets.QMainWindow()
             ui = Module.Ui_MainWindow()
             ui.setupUi(window)
             window.ui = ui
 
-        # Mostrar ventana y establecer referencias
+        # IMPORTANTE: actualizar referencias ANTES de mostrar
+        self.subwindow_open = True
+        self.active_subwindow = window
+        self.active_ui = window if hasattr(window, "handle_serial") else getattr(window, "ui", None)
+
         window.show()
-
-        # Establecer control de subventana solo si sigue visible
-        if window.isVisible():
-            self.subwindow_open = True
-            self.active_subwindow = window
-            self.active_ui = window if hasattr(window, "handle_serial") else getattr(window, "ui", None)
-
-        # Conectar la señal 'destroyed' para limpiar al cerrar
         window.destroyed.connect(self.on_subwindow_closed)
 
+        print(f"[INFO] Nueva subinterfaz activa: {type(window).__name__}")
         return window
+
 
 
     def launch_S_D(self):
@@ -153,7 +149,18 @@ class MenuApp(QtWidgets.QWidget):
 
     def launch_M_A(self):
         print("[INFO] Lanzando Modo Aventura...")
-        self.window_ma = self.launch_subinterface(M_A)
+
+        # Cerrar instancia anterior si sigue viva (opcional, evita duplicados)
+        if self.active_subwindow and isinstance(self.active_subwindow, M_A.MainWindowLogic):
+            self.active_subwindow.close()
+
+        self.window_ma = M_A.MainWindowLogic(parent_menu=self)
+        self.active_subwindow = self.window_ma
+        self.active_ui = self.window_ma
+        self.subwindow_open = True
+
+        self.window_ma.show()
+        self.window_ma.destroyed.connect(self.on_subwindow_closed)
 
     def launch_E_L(self):
         print("[INFO] Lanzando Estilo Libre...")

@@ -48,9 +48,12 @@ class MainWindowLogic(QtWidgets.QMainWindow):
         self.mode_index = 0
         self.recent_signals = []
         self.video_player = QMediaPlayer(None, QMediaPlayer.VideoSurface)
-        self.video_widget = QVideoWidget(self.ui.label_3)
+        self.video_widget = QVideoWidget()
+        self.ui.label_3.layout().addWidget(self.video_widget) if self.ui.label_3.layout() else self.video_widget.setParent(self.ui.label_3)
         self.video_widget.setGeometry(0, 0, self.ui.label_3.width(), self.ui.label_3.height())
+
         self.video_player.setVideoOutput(self.video_widget)
+        self.video_player.setVolume(100)
         self.video_widget.hide()
 
         self.buttons = [self.ui.b1, self.ui.b2, self.ui.b3, self.ui.b4, self.ui.b5, self.ui.b6, self.ui.b7]
@@ -136,10 +139,14 @@ class MainWindowLogic(QtWidgets.QMainWindow):
 
     def play_video(self, filename):
         path = os.path.join(VIDEO_PATH, filename)
+        if not os.path.exists(path):
+            print(f"[ERROR] Video no encontrado: {path}")
+            return
         self.video_widget.show()
         self.video_player.setMedia(QMediaContent(QUrl.fromLocalFile(path)))
         self.video_player.play()
         self.video_player.mediaStatusChanged.connect(self.restore_image_after_video)
+
 
     def restore_image_after_video(self, status):
         if status == QMediaPlayer.EndOfMedia:
